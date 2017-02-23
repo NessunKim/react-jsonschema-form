@@ -313,6 +313,36 @@ describe("Form", () => {
         .eql("hello");
     });
 
+    it("should recursively handle referenced definitions", () => {
+      const schema = {
+        $ref: "#/definitions/node",
+        definitions: {
+          node: {
+            type: "object",
+            properties: {
+              name: {type: "string"},
+              children: {
+                type: "array",
+                items: {
+                  $ref: "#/definitions/node"
+                }
+              }
+            }
+          }
+        }
+      };
+
+      const {node} = createFormComponent({schema});
+
+      expect(node.querySelector("#root_children_0_name"))
+        .to.not.exist;
+
+      Simulate.click(node.querySelector(".array-item-add button"));
+
+      expect(node.querySelector("#root_children_0_name"))
+        .to.exist;
+    });
+
     it("should priorize definition over schema type property", () => {
       // Refs bug #140
       const schema = {
@@ -381,7 +411,24 @@ describe("Form", () => {
       const {node} = createFormComponent({schema});
 
       expect(node.querySelectorAll("option"))
-        .to.have.length.of(2);
+        .to.have.length.of(3);
+    });
+  });
+
+  describe("Default value handling on clear", () => {
+    const schema = {
+      type: "string",
+      default: "foo",
+    };
+
+    it("should not set default when a text field is cleared", () => {
+      const {node} = createFormComponent({schema, formData: "bar"});
+
+      Simulate.change(node.querySelector("input"), {
+        target: {value: ""}
+      });
+
+      expect(node.querySelector("input").value).eql("");
     });
   });
 
